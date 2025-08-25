@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>My College Schedule</title>
+<style>
+  :root{
+    --bg: #0b0d10;
+    --card: #14181d;
+    --muted: #8b98a9;
+    --text: #e7edf5;
+    --accent: #4f8cff;
+    --accent-2:#6ee7b7;
+    --danger:#ff6b6b;
+    --break:#7a7f87;
+    --border:#232a32;
+    --chip:#1c222b;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --muted:#62707f;
+      --text:#11161c;
+      --accent:#2563eb;
+      --accent-2:#059669;
+      --danger:#e11d48;
+      --break:#6b7280;
+      --border:#e5e7eb;
+      --chip:#f3f4f6;
+      --shadow: 0 10px 24px rgba(2,6,23,.08);
+    }
+  }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji;}
+  .wrap{max-width: 820px; margin: 0 auto; padding: 16px; padding-bottom: 40px;}
+  header{position: sticky; top:0; backdrop-filter: blur(8px); background: color-mix(in srgb, var(--bg) 85%, transparent); z-index: 10; border-bottom:1px solid var(--border);}
+  header .bar{display:flex; gap:12px; align-items:center; padding: 12px 16px;}
+  .title{font-size: 18px; font-weight:700; letter-spacing:.2px;}
+  .today{margin-left:auto; font-variant-numeric: tabular-nums; color:var(--muted);}
+  .seg{display:flex; gap:8px; padding: 8px 16px 12px;}
+  .seg button{flex:1; border:1px solid var(--border); background:var(--chip); color:var(--text); border-radius:12px; padding:10px 12px; font-weight:600}
+  .seg button.active{background:var(--accent); color:white; border-color:transparent; box-shadow: var(--shadow)}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; box-shadow: var(--shadow);}
+  .grid{display:grid; grid-template-columns: 1fr; gap:12px;}
+  .row{display:flex; gap:12px; align-items:center;}
+  .time{font-variant-numeric: tabular-nums; font-weight:700; min-width:86px;}
+  .block{flex:1; border-left:6px solid var(--accent); padding:10px 12px; border-radius:12px; background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent);}
+  .block .name{font-weight:800; letter-spacing:.2px;}
+  .block .loc{color:var(--muted); font-size: 13px;}
+  .break{border-left-color: var(--break) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--break) 14%, transparent), transparent);}
+  .muted{color:var(--muted)}
+  .chips{display:flex; flex-wrap: wrap; gap:8px; margin:8px 0 4px;}
+  .chip{background:var(--chip); border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-size:13px}
+  .next{display:flex; gap:12px; align-items:center;}
+  .next .when{font-weight:800; font-variant-numeric: tabular-nums;}
+  .tag{font-size:12px; font-weight:800; text-transform: uppercase; letter-spacing:.12em; color:var(--muted);}
+  .kudos{margin-top: 16px; text-align:center; color:var(--muted); font-size:12px}
+  .legend{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;}
+  .legend .lg{display:flex; gap:8px; align-items:center;}
+  .swatch{width:14px; height:14px; border-radius:4px; border:1px solid var(--border)}
+  .hid{display:none;}
+  .foot-space{height:32px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="title">College Schedule</div>
+    <div class="today" id="dateNow"></div>
+  </div>
+  <div class="seg">
+    <button id="tabToday" class="active">Today</button>
+    <button id="tabWeek">Week</button>
+    <button id="tabInfo">Info</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section id="paneToday" class="pane">
+    <div class="card" id="nextCard">
+      <div class="tag">Next up</div>
+      <div class="next" id="nextContent">
+        <div class="when">—</div>
+        <div>
+          <div class="name">No events</div>
+          <div class="muted">You're free 🎉</div>
+        </div>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+    <div class="card">
+      <div class="tag">Today</div>
+      <div class="grid" id="todayList"></div>
+    </div>
+    <div class="kudos">Tip: Add this page to your Home Screen in Safari → Share → “Add to Home Screen”. Works offline.</div>
+  </section>
+
+  <section id="paneWeek" class="pane hid">
+    <div class="card">
+      <div class="tag">This Week</div>
+      <div class="chips" id="dayChips"></div>
+      <div class="grid" id="weekList"></div>
+    </div>
+  </section>
+
+  <section id="paneInfo" class="pane hid">
+    <div class="card">
+      <div class="tag">Legend</div>
+      <div class="legend" id="legend"></div>
+      <div style="height:12px"></div>
+      <div class="tag">Details</div>
+      <div class="chips">
+        <div class="chip">Semester: Aug 25 – Dec 11, 2025</div>
+        <div class="chip">Timezone: America/Chicago</div>
+        <div class="chip">Breaks: between classes + to 4pm (Mon–Thu)</div>
+      </div>
+      <p class="muted">All data is embedded locally — no internet needed.</p>
+    </div>
+  </section>
+  <div class="foot-space"></div>
+</div>
+
+<script>
+// ---------- Data ----------
+const tz = "America/Chicago";
+// color palette per course
+const COLORS = {
+  "Math 1314": "#3B82F6",
+  "ENGL 1301": "#22C55E",
+  "BIOL 1370": "#A855F7",
+  "UNIV 1201": "#F59E0B",
+  "HIST 1301": "#EF4444",
+  "BIOL 1170 (Lab)": "#06B6D4",
+  "Break": "#6B7280"
+};
+
+const CLASSES = [
+  {title:"Math 1314", days:["MO","WE","FR"], start:"08:30", end:"09:25", loc:"WHT 104", startDate:"2025-08-25", endDate:"2025-12-10"},
+  {title:"ENGL 1301", days:["MO","WE","FR"], start:"09:40", end:"10:35", loc:"BLK 206", startDate:"2025-08-25", endDate:"2025-12-10"},
+  {title:"BIOL 1370", days:["MO","WE","FR"], start:"12:00", end:"12:55", loc:"AIC 126", startDate:"2025-08-25", endDate:"2025-12-10"},
+  {title:"UNIV 1201", days:["TU","TH"], start:"08:30", end:"09:25", loc:"BLK 221", startDate:"2025-08-26", endDate:"2025-12-11"},
+  {title:"HIST 1301", days:["TU","TH"], start:"11:40", end:"13:00", loc:"AIC 223", startDate:"2025-08-26", endDate:"2025-12-11"},
+  {title:"BIOL 1170 (Lab)", days:["FR"], start:"14:00", end:"17:00", loc:"AIC 107", startDate:"2025-08-29", endDate:"2025-12-05"}
+];
+
+const DOW = ["SU","MO","TU","WE","TH","FR","SA"];
+function toDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
+function toMinutes(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
+function fmtTime(hhmm){
+  const [h,m] = hhmm.split(":").map(Number);
+  const ampm = h >= 12 ? "pm":"am";
+  const h12 = ((h + 11) % 12 + 1);
+  return `${h12}:${String(m).padStart(2,"0")}${ampm}`;
+}
+function minutesToLabel(mins){
+  const h = Math.floor(mins/60), m = mins%60;
+  if(h && m) return `${h}h ${m}m`; if(h) return `${h}h`; return `${m}m`;
+}
+
+// Build per-day schedule with breaks (no duplicates) and 4pm end-break Mon-Thu
+function buildDayPlan(targetDate){
+  const day = DOW[targetDate.getDay()];
+  // gather classes active on this date and day
+  const todays = [];
+  for(const c of CLASSES){
+    if(!c.days.includes(day)) continue;
+    const s = toDate(c.startDate), e = toDate(c.endDate);
+    if(targetDate < s || targetDate > e) continue;
+    todays.push({...c});
+  }
+  // Sort by start
+  todays.sort((a,b)=> toMinutes(a.start)-toMinutes(b.start));
+
+  // Insert breaks between consecutive classes
+  const items = [];
+  for(let i=0;i<todays.length;i++){
+    const cur = todays[i];
+    items.push({type:"class", ...cur});
+    const next = todays[i+1];
+    if(next){
+      const endM = toMinutes(cur.end), startNextM = toMinutes(next.start);
+      if(startNextM > endM){
+        items.push({
+          type:"break",
+          title:"Break",
+          start: cur.end,
+          end: next.start,
+          detail:`Between ${cur.title} and ${next.title}`
+        });
+      }
+    }
+  }
+
+  // End-of-day break until 4pm for Mon–Thu
+  if(["MO","TU","WE","TH"].includes(day) && todays.length){
+    const last = todays[todays.length-1];
+    if(toMinutes(last.end) < 16*60){
+      items.push({
+        type:"break",
+        title:"Break until 4pm",
+        start: last.end,
+        end: "16:00",
+        detail:`After ${last.title}`
+      });
+    }
+  }
+  return items;
+}
+
+// ---------- Rendering ----------
+function swatch(color){ return `<span class="swatch" style="background:${color}"></span>`; }
+
+function renderLegend(){
+  const el = document.getElementById("legend");
+  const names = ["Math 1314","ENGL 1301","BIOL 1370","UNIV 1201","HIST 1301","BIOL 1170 (Lab)","Break"];
+  el.innerHTML = names.map(n => `<div class="lg">${swatch(COLORS[n])}<div>${n}</div></div>`).join("");
+}
+
+function renderDayList(container, date){
+  const items = buildDayPlan(date);
+  container.innerHTML = items.map(it => {
+    const mins = toMinutes(it.end) - toMinutes(it.start);
+    const color = it.type === "break" ? "var(--break)" : (COLORS[it.title] || "var(--accent)");
+    const bClass = it.type === "break" ? "block break":"block";
+    const name = it.type === "break" ? `${it.title} (${minutesToLabel(mins)})` : it.title;
+    const locLine = it.type === "break" ? (it.detail || "") : `${it.loc}`;
+    return `
+      <div class="row">
+        <div class="time">${fmtTime(it.start)}–${fmtTime(it.end)}</div>
+        <div class="${bClass}" style="border-left-color:${color}; background: linear-gradient(180deg, ${color}22, transparent)">
+          <div class="name">${name}</div>
+          <div class="loc">${locLine}</div>
+        </div>
+      </div>`;
+  }).join("") || `<div class="muted">No events today.</div>`;
+}
+
+function setTodayHeader(){
+  const now = new Date();
+  const opts = { weekday:"short", month:"short", day:"numeric" };
+  document.getElementById("dateNow").textContent = now.toLocaleDateString(undefined, opts);
+}
+
+function setNextUp(){
+  const now = new Date();
+  const items = buildDayPlan(now);
+  const nowM = now.getHours()*60 + now.getMinutes();
+  let next = null, ongoing = null;
+
+  for(const it of items){
+    const s = toMinutes(it.start), e = toMinutes(it.end);
+    if(nowM < s){ next = it; break; }
+    if(nowM >= s && nowM < e){ ongoing = it; break; }
+  }
+  const el = document.getElementById("nextContent");
+  if(ongoing){
+    el.innerHTML = `
+      <div class="when">Until ${fmtTime(ongoing.end)}</div>
+      <div>
+        <div class="name">${ongoing.type==="break" ? "Break" : ongoing.title}</div>
+        <div class="muted">${ongoing.type==="break" ? (ongoing.detail || "") : ongoing.loc}</div>
+      </div>`;
+  } else if(next){
+    const mins = toMinutes(next.start) - nowM;
+    el.innerHTML = `
+      <div class="when">In ${minutesToLabel(mins)}</div>
+      <div>
+        <div class="name">${next.type==="break" ? "Break" : next.title}</div>
+        <div class="muted">${fmtTime(next.start)} – ${fmtTime(next.end)}</div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="when">—</div>
+      <div>
+        <div class="name">No more events today</div>
+        <div class="muted">You’re done 🎉</div>
+      </div>`;
+  }
+}
+
+function renderToday(){
+  renderDayList(document.getElementById("todayList"), new Date());
+}
+
+function renderWeek(dayIndex=null){
+  const container = document.getElementById("weekList");
+  const chips = document.getElementById("dayChips");
+  chips.innerHTML = "";
+  const labels = ["Mon","Tue","Wed","Thu","Fri"];
+  const map = {0:"MO",1:"TU",2:"WE",3:"TH",4:"FR"};
+
+  labels.forEach((label,i)=>{
+    const btn = document.createElement("div");
+    btn.className = "chip";
+    btn.textContent = label;
+    btn.onclick = ()=> renderWeek(i);
+    chips.appendChild(btn);
+  });
+
+  container.innerHTML = "";
+  // If specific day chosen, render only that; else render all Mon–Fri
+  if(dayIndex !== null){
+    const now = new Date();
+    const monday = new Date(now);
+    const day = now.getDay();
+    const diffToMonday = ((day+6)%7); // 0 if Monday
+    monday.setDate(now.getDate() - diffToMonday);
+    const date = new Date(monday); date.setDate(monday.getDate() + dayIndex);
+    const section = document.createElement("div");
+    section.innerHTML = `<div class="tag" style="margin-bottom:8px">${labels[dayIndex]}</div>`;
+    container.appendChild(section);
+    const grid = document.createElement("div");
+    grid.className = "grid"; section.appendChild(grid);
+    renderDayList(grid, date);
+  } else {
+    const now = new Date();
+    const monday = new Date(now);
+    const day = now.getDay();
+    const diffToMonday = ((day+6)%7);
+    monday.setDate(now.getDate() - diffToMonday);
+    const labelsFull = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+    for(let i=0;i<5;i++){
+      const date = new Date(monday); date.setDate(monday.getDate()+i);
+      const section = document.createElement("div");
+      section.innerHTML = `<div class="tag" style="margin:12px 0 8px">${labelsFull[i]}</div>`;
+      container.appendChild(section);
+      const grid = document.createElement("div");
+      grid.className = "grid"; section.appendChild(grid);
+      renderDayList(grid, date);
+    }
+  }
+}
+
+function switchTab(tab){
+  document.getElementById("tabToday").classList.remove("active");
+  document.getElementById("tabWeek").classList.remove("active");
+  document.getElementById("tabInfo").classList.remove("active");
+  document.getElementById("paneToday").classList.add("hid");
+  document.getElementById("paneWeek").classList.add("hid");
+  document.getElementById("paneInfo").classList.add("hid");
+
+  if(tab==="today"){ document.getElementById("tabToday").classList.add("active"); document.getElementById("paneToday").classList.remove("hid"); }
+  if(tab==="week"){ document.getElementById("tabWeek").classList.add("active"); document.getElementById("paneWeek").classList.remove("hid"); }
+  if(tab==="info"){ document.getElementById("tabInfo").classList.add("active"); document.getElementById("paneInfo").classList.remove("hid"); }
+}
+
+document.getElementById("tabToday").onclick = ()=> switchTab("today");
+document.getElementById("tabWeek").onclick = ()=> { switchTab("week"); renderWeek(); };
+document.getElementById("tabInfo").onclick = ()=> { switchTab("info"); };
+
+// init
+setTodayHeader();
+renderLegend();
+renderToday();
+setNextUp();
+setInterval(()=>{ setTodayHeader(); setNextUp(); }, 30000);
+</script>
+</body>
+</html>
